@@ -7,19 +7,17 @@ import DeleteConfirmation from './components/DeleteConfirmation.jsx'
 import logoImg from './assets/logo.png'
 import { sortPlacesByDistance } from './loc.js'
 
-
 const storedIds = JSON.parse(localStorage.getItem('selectedPlaces')) || []
 const storedPlaces = storedIds.map((id) => {
 	return AVAILABLE_PLACES.find((place) => place.id === id)
 })
 
-
 function App() {
 	const modal = useRef()
-    const selectedPlace = useRef()
-    const [modalIsOpen, setModelIsOpen] = useState(false);
+	const selectedPlace = useRef()
+	const [modalIsOpen, setModalIsOpen] = useState(false) // Fixed typo: setModelIsOpen -> setModalIsOpen
 	const [pickedPlaces, setPickedPlaces] = useState(storedPlaces)
-	const [availablePlaces, setAvailableSpaces] = useState([])
+	const [availablePlaces, setAvailablePlaces] = useState([]) // Fixed typo: setAvailableSpaces -> setAvailablePlaces
 
 	useEffect(() => {
 		navigator.geolocation.getCurrentPosition((position) => {
@@ -28,17 +26,29 @@ function App() {
 				position.coords.latitude,
 				position.coords.longitude
 			)
-			setAvailableSpaces(sortedPlaces)
+			setAvailablePlaces(sortedPlaces)
 		})
 	}, [])
 
 	function handleStartRemovePlace(id) {
-		setModelIsOpen(true)
+		setModalIsOpen(true)
 		selectedPlace.current = id
+
+		// Set a timer to close the modal after 3 seconds (3000ms)
+		const timer = setTimeout(() => {
+			handleStopRemovePlace()
+		}, 3000)
+
+		// Clean up the timer if the component unmounts or modal closes manually
+		modal.current.timer = timer // Store timer ID in ref for cleanup
 	}
 
 	function handleStopRemovePlace() {
-		setModelIsOpen(false)
+		setModalIsOpen(false)
+		// Clear the timer if it exists to prevent it from running after manual close
+		if (modal.current.timer) {
+			clearTimeout(modal.current.timer)
+		}
 	}
 
 	function handleSelectPlace(id) {
@@ -62,14 +72,15 @@ function App() {
 
 	const handleRemovePlace = useCallback(function handleRemovePlace() {
 		setPickedPlaces((prevPickedPlaces) =>
-			prevPickedPlaces.filter(
-                (place) => {
-                    return place.id !== selectedPlace.current;
-                } 
-			)
+			prevPickedPlaces.filter((place) => {
+				return place.id !== selectedPlace.current
+			})
 		)
-
-		setModelIsOpen(false)
+		setModalIsOpen(false)
+		// Clear the timer if it exists
+		if (modal.current.timer) {
+			clearTimeout(modal.current.timer)
+		}
 
 		const storedIds =
 			JSON.parse(localStorage.getItem('selectedPlaces')) || []
@@ -79,13 +90,12 @@ function App() {
 				storedIds.filter((id) => id !== selectedPlace.current)
 			)
 		)
-	}, []) 
+	}, [])
 
 	return (
 		<>
 			<Modal open={modalIsOpen} onClose={handleStopRemovePlace}>
 				<DeleteConfirmation
-					open={modalIsOpen}
 					onCancel={handleStopRemovePlace}
 					onConfirm={handleRemovePlace}
 				/>
